@@ -2,7 +2,7 @@
   "translatorID": "dda092d2-a257-46af-b9a3-2f04a55cb04f",
   "translatorType": 2,
   "label": "Tana Metadata Export",
-  "creator": "Joshua Hall based upon Stian Håklev, Joel Chan, and Lukas Kawerau's work",
+  "creator": "Aadam based upon Joshua Hall, Stian Håklev, Joel Chan, and Lukas Kawerau's work",
   "target": "md",
   "minVersion": "2.0",
   "maxVersion": "",
@@ -50,14 +50,31 @@ function doExport() {
   };
 
   // Return the Tana formatted date
-  const formatDate = (dateJSON) => {
+  // const formatDate = (dateJSON) => {
+  //   // Generate a Tana friendly formatted date
+  //   // Falls back to Jan 1, 2100 for any missing components of the date
+  //   const year = dateJSON["year"] || "2100";
+  //   const month = months[dateJSON["month"]] || months[0];
+  //   const day = dateJSON["day"] || 1;
+  //   const nthStr = nth(day);
+  //   return link(`${month} ${day}${nthStr}, ${year}`);
+  // };
+  const formatDate = (dateJSON, yearonly=false) => {
     // Generate a Tana friendly formatted date
-    // Falls back to Jan 1, 2100 for any missing components of the date
-    const year = dateJSON["year"] || "2100";
-    const month = months[dateJSON["month"]] || months[0];
-    const day = dateJSON["day"] || 1;
-    const nthStr = nth(day);
-    return link(`${month} ${day}${nthStr}, ${year}`);
+    datestr = "";
+    if (dateJSON["year"]) {
+      datestr += "date:" + dateJSON["year"];
+    } else {
+      return "";
+    }
+
+    if (dateJSON["month"] && !yearonly) {
+      datestr += "-" + ('0' + (dateJSON["month"]+1)).slice(-2)
+    }
+    if (dateJSON["day"] && !yearonly) {
+      datestr += "-" + ('0' + (dateJSON["day"])).slice(-2)
+    }
+    return link(datestr);
   };
   // ---
 
@@ -68,8 +85,13 @@ function doExport() {
     return `[[${name}]]`;
   };
 
-  // Return a " #[[tag]]" value
+  // Return a " #tag" value
   const tag = (name) => {
+    return ` #${name}`;
+  };
+
+  // Return a linked " #[[tag]]" value
+  const ltag = (name) => {
     return ` #[[${name}]]`;
   };
 
@@ -144,15 +166,15 @@ function doExport() {
   //   and update all of the tags, statuses, and fields below. I suspect it'll save you headaches later.
 
   // Constants describing source type tags
-  const sourceTag = tag("source");
-  const journalArticleTag = tag("journal article");
-  const authorTag = tag("author");
-  const journalPublicationTag = tag("journal (publication)");
+  const sourceTag = tag("zotero^7_XpvcEHzKp2");
+  const journalArticleTag = ltag("journal article^OInwjsvw4nA5");
+  const authorTag = tag("person");
+  // const journalPublicationTag = tag("journal (publication)");
   const topicTag = tag("topic");
-  const bookTag = tag("book");
+  const bookTag = tag("book^_RP9wBIk-A");
   const organizationTag = tag("organization");
   const chapterTag = tag("chapter");
-  const videoTag = tag("video");
+  const videoTag = tag("video^RQZBN87fKW");
   const hostTag = tag("host");
   const publicationTag = tag("publication");
   const podcastEpisodeTag = tag("podcast episode");
@@ -185,29 +207,30 @@ function doExport() {
   const softwareTag = tag("software");
 
   // Constants describing source status options
-  const toReadStatus = link("📚 To Read");
-  const toWatchStatus = link("🎞️ To Watch");
-  const toListenStatus = link("💿 To Listen");
-  const readingStatus = link("📖 Reading");
+  const toReadStatus = link("🥚 New^HbiqwfD0QZ");
+  const toWatchStatus = link("🥚 New^HbiqwfD0QZ");
+  const toListenStatus = link("🥚 New^HbiqwfD0QZ");
+  const readingStatus = link("🐣 Processing^S8yzihbKLQ");
   const watchingStatus = link("📽️ Watching");
   const listeningStatus = link("🎧 Listening");
-  const readStatus = link("📗 Read");
+  const readStatus = link("🍳 Processed^6z86zEKdJG");
   const watchedStatus = link("📼 Watched");
   const listenedStatus = link("🔇 Listened");
 
   // Constants for the fields used
   const titleField = field("Title");
-  const sourceStatusField = field("Source Status");
+  const sourceStatusField = field("Status");
   const citationKeyField = field("Citation Key");
-  const authorField = field("Author(s)");
+  const authorField = field("Author");
   const publicationDateField = field("Publication Date");
+  const yearField = field("Year")
   const zoteroLinkField = field("Zotero Link");
   const journalField = field("Journal");
   const volumeField = field("Volume");
   const issueField = field("Issue");
-  const urlField = field("URL");
+  const urlField = field("Link");
   const doiField = field("DOI");
-  const topicField = field("Topic(s)");
+  const topicField = field("Related Knowledge^VbEnIgsbwl");
   const publisherField = field("Publisher");
   const bookField = field("Book");
   const hostField = field("Host(s)");
@@ -232,7 +255,7 @@ function doExport() {
   const cartographerField = field("Cartographer");
   const mapTypeField = field("Map Type");
   const mapScaleField = field("Map Scale");
-  const locationField = field("Location");
+  const locationField = field("Location^4OcwaKKb5O");
   const conferenceField = field("Conference");
   const programTitleField = field("Program Title");
   const tvNetworkField = field("TV Network");
@@ -257,7 +280,7 @@ function doExport() {
     // - Foo bar #[[source]]
     //   - Title:: Foo bar
     //   - Source Status:: [[📚 To Read]]
-    Zotero.write(tab[0] + title + type + "\n");
+    Zotero.write(tab[0] + title + " " + type + "\n");
     writeTitle(title);
     writeSourceStatus(status);
   };
@@ -296,7 +319,8 @@ function doExport() {
   const writeJournalTitle = (journalTitle, t = 1) => {
     // - Journal:: Foo Bar #[[journal (publication)]]
     if (journalTitle !== undefined && journalTitle !== "") {
-      Zotero.write(tab[t] + journalField + journalTitle + journalPublicationTag + "\n");
+      Zotero.write(tab[t] + journalField + link(journalTitle) + "\n");
+      // Zotero.write(tab[t] + journalField + link(journalTitle + journalPublicationTag) + "\n");
     }
   };
 
@@ -332,6 +356,13 @@ function doExport() {
     }
   };
 
+  // Write the Year
+  const writeYear = (date, t = 1) => {
+    if (date !== undefined && date !== "") {
+      Zotero.write(tab[t] + yearField + formatDate(Zotero.Utilities.strToDate(date), yearonly=true) + "\n");
+    }
+  }
+
   // Write the list of authors
   const writeAuthors = (creators, t = 1) => {
     // - Author(s)::
@@ -357,7 +388,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + authorField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + authorTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + authorTag) + "\n");
         }
       }
     }
@@ -387,7 +418,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + hostField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + hostTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + hostTag) + "\n");
         }
       }
     }
@@ -412,7 +443,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + intervieweeField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + personTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + personTag) + "\n");
         }
       }
     }
@@ -437,7 +468,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + directorField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + directorTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + directorTag) + "\n");
         }
       }
     }
@@ -463,7 +494,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + presenterField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + personTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + personTag) + "\n");
         }
       }
     }
@@ -489,7 +520,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + artistField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + artistTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + artistTag) + "\n");
         }
       }
     }
@@ -516,7 +547,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + billSponsorField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + personTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + personTag) + "\n");
         }
       }
     }
@@ -543,7 +574,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + cartographerField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + personTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + personTag) + "\n");
         }
       }
     }
@@ -569,7 +600,7 @@ function doExport() {
         // Start by creating the type field parent
         Zotero.write(tab[t] + inventorField + "\n");
         for (name in names) {
-          Zotero.write(tab[t + 1] + names[name] + personTag + "\n");
+          Zotero.write(tab[t + 1] + link(names[name] + personTag) + "\n");
         }
       }
     }
@@ -594,8 +625,8 @@ function doExport() {
   // Write tags as topics in Tana
   const writeTags = (tags, t = 1) => {
     // - Topic(s)::
-    //   - Foo Bar #[[topic]]
-    //   - Woo #[[topic]]
+    //   - [[Foo Bar #topic]]
+    //   - [[Woo #topic]]
     if (tags !== undefined) {
       // Start by creating the topic field parent
       Zotero.write(tab[t] + topicField + "\n");
@@ -604,7 +635,7 @@ function doExport() {
       for (topic in tags) {
         // Drop any tags on the ignore list
         if (ignoredTopics.indexOf(tags[topic].tag.toLowerCase()) === -1) {
-          Zotero.write(tab[t + 1] + titleCase(tags[topic].tag) + topicTag + "\n");
+          Zotero.write(tab[t + 1] + link(titleCase(tags[topic].tag) + topicTag) + "\n");
         }
       }
     }
@@ -614,7 +645,8 @@ function doExport() {
   const writePublisher = (publisher, t = 1) => {
     // - Publisher:: Foo Bar #[[organization]]
     if (publisher !== undefined && publisher !== "") {
-      Zotero.write(tab[t] + publisherField + publisher + organizationTag + "\n");
+      Zotero.write(tab[t] + publisherField + link(publisher) + "\n");
+      // Zotero.write(tab[t] + publisherField + publisher + organizationTag + "\n");
     }
   };
 
@@ -635,9 +667,9 @@ function doExport() {
 
   // Write the publication title
   const writePublication = (pubTitle, t = 1) => {
-    // - Journal:: Foo Bar #[[journal (publication)]]
+    // - Journal:: [[Foo Bar #journal (publication)]]
     if (pubTitle !== undefined && pubTitle !== "") {
-      Zotero.write(tab[t] + publicationField + pubTitle + publicationTag + "\n");
+      Zotero.write(tab[t] + publicationField + link(pubTitle + publicationTag) + "\n");
     }
   };
 
@@ -847,6 +879,7 @@ function doExport() {
           writeAuthors(item.creators);
           writeJournalTitle(item.publicationTitle);
           writePublicationDate(item.date);
+          writeYear(item.date);
           writeVolume(item.volume);
           writeIssue(item.issue);
           writeURL(item.url);
@@ -859,6 +892,8 @@ function doExport() {
           writeCitationKey(item.citationKey);
           writeZoteroLink(item.key, item.libraryID);
           writeAuthors(item.creators);
+          writePublicationDate(item.date);
+          writeYear(item.date);
           writeURL(item.url);
           writeTags(item.tags);
           writePublisher(item.publisher);
@@ -876,6 +911,7 @@ function doExport() {
           writeZoteroLink(item.key, item.libraryID);
           writeHosts(item.creators);
           writePublication(item.libraryCatalog);
+          writeYear(item.date);
           writeURL(item.url);
           writeTags(item.tags);
           break;
@@ -889,6 +925,7 @@ function doExport() {
           writePodcast(item.seriesTitle);
           writeTags(item.tags);
           writeURL(item.url);
+          writeYear(item.date);
           break;
         case "film":
           writeBase(item.title, filmTag, toWatchStatus);
@@ -898,6 +935,7 @@ function doExport() {
           writeTags(item.tags);
           writeGenre(item.genre);
           writeLanguage(item.language);
+          writeYear(item.date);
           break;
         case "presentation":
           writeBase(item.title, presentationTag, toWatchStatus);
@@ -905,6 +943,7 @@ function doExport() {
           writeZoteroLink(item.key, item.libraryID);
           writeTags(item.tags);
           writeDate(item.date);
+          writeYear(item.date);
           writePresenters(item.creators);
           break;
         case "newspaperArticle":
@@ -915,6 +954,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writePublicationDate(item.date);
+          writeYear(item.date);
           break
         case "blogPost":
         case "webpage":
@@ -925,6 +965,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writePublicationDate(item.date);
+          writeYear(item.date);
           writeURL(item.url);
           break;
         case "artwork":
@@ -936,6 +977,7 @@ function doExport() {
           writeArtworkMedium(item.artworkMedium);
           writeArtworkSize(item.artworkSize);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "report":
           writeBase(item.title, reportTag, toReadStatus);
@@ -943,6 +985,7 @@ function doExport() {
           writeZoteroLink(item.key, item.libraryID);
           writeTags(item.tags);
           writePublicationDate(item.date);
+          writeYear(item.date);
           writeInstitution(item.institution);
           break;
         case "bill":
@@ -955,6 +998,7 @@ function doExport() {
           writeLegislativeBody(item.legislativeBody);
           writeLegislativeSession(item.session);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "case":
         case "hearing":
@@ -964,6 +1008,7 @@ function doExport() {
           writeTags(item.tags);
           writeCourt(item.court);
           writeDateDecided(item.dateDecided);
+          writeYear(item.dateDecided);
           writeURL(item.url);
           break;
         case "letter":
@@ -973,6 +1018,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "document":
         case "manuscript":
@@ -999,6 +1045,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "email":
           writeBase(item.title, emailTag, toReadStatus);
@@ -1007,6 +1054,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "map":
           writeBase(item.title, mapTag, toReadStatus);
@@ -1017,6 +1065,7 @@ function doExport() {
           writeMapType(item.mapType);
           writeMapScale(item.scale);
           writeDate(item.date);
+          writeYear(item.date);
           writeLocation(item.place);
           break;
         case "patent":
@@ -1035,6 +1084,7 @@ function doExport() {
           writeZoteroLink(item.key, item.libraryID);
           writeTags(item.tags);
           writeDate(item.date);
+          writeYear(item.date);
           writeHosts(item.creators);
           writeInterviewees(item.creators);
           writeMedium(item.interviewMedium);
@@ -1047,6 +1097,7 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writeURL(item.url);
+          writeYear(item.date);
           break;
         case "encyclopediaArticle":
         case "dictionaryEntry":
@@ -1081,6 +1132,7 @@ function doExport() {
           writeTvNetwork(item.network);
           writeLocation(item.place);
           writeDate(item.date);
+          writeYear(item.date);
           break;
         case "statute":
           writeBase(item.title, statuteTag, toReadStatus);
@@ -1096,13 +1148,14 @@ function doExport() {
           writeTags(item.tags);
           writeAuthors(item.creators);
           writePublicationDate(item.date);
+          writeYear(item.date);
           writeDOI(item.DOI);
           writeConference(item.conferenceName);
           break;
         default:
           // Pass through anything not defined above as a new type for testing and configuration
           writeBase(item.title, tag(item.itemType));
-
+          writeYear(item.date);
           // Full object JSON for testing
           // Zotero.write("\n");
           // Zotero.write("\n");
